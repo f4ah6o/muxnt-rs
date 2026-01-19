@@ -1,0 +1,15 @@
+[package]
+name = "muxnt-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.97"
+clap = { version = "4.5.32", features = ["derive"] }
+crossterm = { version = "0.29.0", features = ["event-stream"] }
+futures = "0.3.31"
+ratatui = "0.30.0"
+shadow-terminal = "0.2.3"
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "sync", "time"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["fmt", "std"] }
