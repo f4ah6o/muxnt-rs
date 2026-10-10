@@ -153,7 +153,11 @@ pub fn remove_pane(node: Node, target: PaneId) -> Option<Node> {
 }
 
 pub fn pane_rect(snapshot: &LayoutSnapshot, id: PaneId) -> Option<Rect> {
-    snapshot.panes.iter().find(|pane| pane.id == id).map(|p| p.rect)
+    snapshot
+        .panes
+        .iter()
+        .find(|pane| pane.id == id)
+        .map(|p| p.rect)
 }
 
 pub fn split_ratio_for_position(splitter: &Splitter, x: u16, y: u16) -> f32 {
@@ -194,7 +198,10 @@ pub fn split_ratio_for_position(splitter: &Splitter, x: u16, y: u16) -> f32 {
 fn layout_node(node: &mut Node, area: Rect, path: &mut Vec<Branch>, snapshot: &mut LayoutSnapshot) {
     match node {
         Node::Leaf(id) => {
-            snapshot.panes.push(PaneLayout { id: *id, rect: area });
+            snapshot.panes.push(PaneLayout {
+                id: *id,
+                rect: area,
+            });
         }
         Node::Split { dir, ratio, a, b } => {
             let (rect_a, rect_b, pos, used_ratio) = split_area(area, *dir, *ratio);
@@ -254,7 +261,11 @@ fn split_area(area: Rect, dir: SplitDirection, ratio: f32) -> (Rect, Rect, u16, 
     }
     let a_size = (a_size as u16).min(total);
     let b_size = total.saturating_sub(a_size);
-    let used_ratio = if total == 0 { clamped } else { a_size as f32 / total as f32 };
+    let used_ratio = if total == 0 {
+        clamped
+    } else {
+        a_size as f32 / total as f32
+    };
 
     match dir {
         SplitDirection::Vertical => {

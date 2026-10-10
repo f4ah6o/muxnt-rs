@@ -18,23 +18,25 @@ use crossterm::event::{
     MouseEventKind,
 };
 use crossterm::execute;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::terminal::{
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+};
 use futures::StreamExt;
+use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::Terminal;
+use shadow_terminal::Protocol;
 use shadow_terminal::active_terminal::ActiveTerminal;
 use shadow_terminal::output::native::{Output, ScreenMode};
 use shadow_terminal::pty::BytesFromSTDIN;
 use shadow_terminal::shadow_terminal::Config;
-use shadow_terminal::Protocol;
 
 use crate::input::key_event_to_bytes;
 use crate::layout::{
-    build_snapshot, pane_rect, remove_pane, replace_leaf_with_split, split_ratio_for_position,
-    LayoutSnapshot, Node, SplitDirection, Splitter, MIN_COLS, MIN_ROWS,
+    LayoutSnapshot, MIN_COLS, MIN_ROWS, Node, SplitDirection, Splitter, build_snapshot, pane_rect,
+    remove_pane, replace_leaf_with_split, split_ratio_for_position,
 };
 use crate::pane::Pane;
 use crate::types::PaneId;
@@ -232,10 +234,10 @@ impl App {
             }
         }
 
-        if !self.panes.contains_key(&self.active_pane) {
-            if let Some(first) = rects.first() {
-                self.active_pane = first.id;
-            }
+        if !self.panes.contains_key(&self.active_pane)
+            && let Some(first) = rects.first()
+        {
+            self.active_pane = first.id;
         }
 
         self.layout_snapshot = snapshot;
@@ -356,10 +358,10 @@ impl App {
             return;
         }
 
-        if !self.panes.contains_key(&self.active_pane) {
-            if let Some(next) = self.panes.keys().next().copied() {
-                self.active_pane = next;
-            }
+        if !self.panes.contains_key(&self.active_pane)
+            && let Some(next) = self.panes.keys().next().copied()
+        {
+            self.active_pane = next;
         }
 
         self.sync_layout();
@@ -385,15 +387,26 @@ impl App {
             .unwrap_or(0);
         let width = (max_len + 4).min(content.width as usize) as u16;
         let height = (MENU_ITEMS.len() + 2).min(content.height as usize) as u16;
-        let mut x = menu.position.0.min(content.x + content.width.saturating_sub(1));
-        let mut y = menu.position.1.min(content.y + content.height.saturating_sub(1));
+        let mut x = menu
+            .position
+            .0
+            .min(content.x + content.width.saturating_sub(1));
+        let mut y = menu
+            .position
+            .1
+            .min(content.y + content.height.saturating_sub(1));
         if x + width > content.x + content.width {
             x = content.x + content.width.saturating_sub(width);
         }
         if y + height > content.y + content.height {
             y = content.y + content.height.saturating_sub(height);
         }
-        Rect { x, y, width, height }
+        Rect {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     fn menu_item_at(&self, menu: &MenuState, x: u16, y: u16) -> Option<usize> {
@@ -431,15 +444,15 @@ impl App {
         let y = mouse.row;
 
         if let Some(confirm) = self.confirm.clone() {
-            if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
-                if let Some(result) = confirm_hit_test(self.viewport, x, y) {
-                    if result {
-                        self.confirm = None;
-                        self.close_pane(confirm.pane_id);
-                    } else {
-                        self.confirm = None;
-                        self.needs_draw = true;
-                    }
+            if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
+                && let Some(result) = confirm_hit_test(self.viewport, x, y)
+            {
+                if result {
+                    self.confirm = None;
+                    self.close_pane(confirm.pane_id);
+                } else {
+                    self.confirm = None;
+                    self.needs_draw = true;
                 }
             }
             return;
@@ -478,15 +491,17 @@ impl App {
                 }
             }
             MouseEventKind::Down(MouseButton::Left) => {
-                if let Some((start, end)) = self.status_bottom {
-                    if y == self.status_area().y && x >= start && x < end {
-                        if let Some(pane) = self.panes.get(&self.active_pane) {
-                            if pane.scroll_position > 0 {
-                                let _ = pane.terminal.scroll_cancel();
-                            }
-                        }
-                        return;
+                if let Some((start, end)) = self.status_bottom
+                    && y == self.status_area().y
+                    && x >= start
+                    && x < end
+                {
+                    if let Some(pane) = self.panes.get(&self.active_pane)
+                        && pane.scroll_position > 0
+                    {
+                        let _ = pane.terminal.scroll_cancel();
                     }
+                    return;
                 }
 
                 if let Some(splitter) = self.splitter_at(x, y) {
@@ -496,10 +511,10 @@ impl App {
 
                 if let Some(pane_id) = self.pane_at(x, y) {
                     self.focus_pane(pane_id);
-                    if let Some(pane) = self.panes.get(&pane_id) {
-                        if pane.scroll_position > 0 {
-                            let _ = pane.terminal.scroll_cancel();
-                        }
+                    if let Some(pane) = self.panes.get(&pane_id)
+                        && pane.scroll_position > 0
+                    {
+                        let _ = pane.terminal.scroll_cancel();
                     }
                 }
             }
@@ -566,10 +581,10 @@ impl App {
             draw_menu(buf, rect, menu.selected);
         }
 
-        if self.confirm.is_some() {
-            if let Some(rect) = confirm_rect(self.viewport) {
-                draw_confirm(buf, rect);
-            }
+        if self.confirm.is_some()
+            && let Some(rect) = confirm_rect(self.viewport)
+        {
+            draw_confirm(buf, rect);
         }
 
         if content.height == 0 || content.width == 0 {
@@ -622,7 +637,12 @@ impl TuiGuard {
 
 impl Drop for TuiGuard {
     fn drop(&mut self) {
-        let _ = execute!(io::stdout(), Show, DisableMouseCapture, LeaveAlternateScreen);
+        let _ = execute!(
+            io::stdout(),
+            Show,
+            DisableMouseCapture,
+            LeaveAlternateScreen
+        );
         let _ = disable_raw_mode();
     }
 }
@@ -633,7 +653,10 @@ async fn main() -> Result<()> {
 
     if let Some(log_path) = cli.log {
         let file = File::create(log_path).context("open log file")?;
-        tracing_subscriber::fmt().with_writer(file).with_ansi(false).init();
+        tracing_subscriber::fmt()
+            .with_writer(file)
+            .with_ansi(false)
+            .init();
     }
 
     if let Some(cwd) = cli.cwd {
@@ -669,11 +692,10 @@ async fn main() -> Result<()> {
             event = events.next() => {
                 match event {
                     Some(Ok(Event::Key(key))) => {
-                        if let Some(bytes) = key_event_to_bytes(key) {
-                            if let Some(sender) = app.active_input_sender() {
+                        if let Some(bytes) = key_event_to_bytes(key)
+                            && let Some(sender) = app.active_input_sender() {
                                 send_bytes(sender, &bytes).await;
                             }
-                        }
                     }
                     Some(Ok(Event::Mouse(mouse))) => {
                         app.handle_mouse(mouse);
@@ -732,7 +754,10 @@ fn layout_summary(layout: &Node) -> String {
     format!("{}, {} {}", grid, count, label)
 }
 
-fn pane_surface_view(pane: &Pane, rect: Rect) -> (&shadow_terminal::termwiz::surface::Surface, usize) {
+fn pane_surface_view(
+    pane: &Pane,
+    rect: Rect,
+) -> (&shadow_terminal::termwiz::surface::Surface, usize) {
     if pane.screen_mode == ScreenMode::Alternate {
         return (&pane.screen_surface, 0);
     }
@@ -819,9 +844,7 @@ fn style_from_attrs(attrs: &shadow_terminal::termwiz::cell::CellAttributes) -> S
     style.add_modifier(modifiers)
 }
 
-fn color_from_attr(
-    attr: shadow_terminal::termwiz::color::ColorAttribute,
-) -> Option<Color> {
+fn color_from_attr(attr: shadow_terminal::termwiz::color::ColorAttribute) -> Option<Color> {
     use shadow_terminal::termwiz::color::ColorAttribute;
 
     match attr {
@@ -924,7 +947,12 @@ fn confirm_rect(viewport: Rect) -> Option<Rect> {
     }
     let x = viewport.x + viewport.width.saturating_sub(width) / 2;
     let y = viewport.y + viewport.height.saturating_sub(height) / 2;
-    Some(Rect { x, y, width, height })
+    Some(Rect {
+        x,
+        y,
+        width,
+        height,
+    })
 }
 
 fn confirm_hit_test(viewport: Rect, x: u16, y: u16) -> Option<bool> {
@@ -969,13 +997,7 @@ fn draw_confirm(buf: &mut Buffer, rect: Rect) {
     let total = yes.len() + 1 + no.len();
     let start = rect.x + (rect.width.saturating_sub(total as u16) / 2);
     buf.set_stringn(start, button_y, yes, yes.len(), style);
-    buf.set_stringn(
-        start + yes.len() as u16 + 1,
-        button_y,
-        no,
-        no.len(),
-        style,
-    );
+    buf.set_stringn(start + yes.len() as u16 + 1, button_y, no, no.len(), style);
 }
 
 fn contains(rect: Rect, x: u16, y: u16) -> bool {
